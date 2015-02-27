@@ -110,7 +110,7 @@ var Todo = (function () {
         this.isDeletedState = attributes.state == 2 /* DELETED */;
     }
     Todo.prototype.getTimeLimitLocalWithTimeZone = function () {
-        return moment.utc(this.timeLimit, 'YYYY/MM/DD HH:mm').local().format('YYYY/MM/DD HH:mm Z');
+        return this.timeLimit ? moment.utc(this.timeLimit, 'YYYY/MM/DD HH:mm').local().format('YYYY/MM/DD HH:mm Z') : '';
     };
     Todo.prototype.parse = function (json) {
         this.id = json.id;
@@ -135,7 +135,7 @@ var Todo = (function () {
                 title: _this.title,
                 url: _this.url,
                 memo: _this.memo,
-                timeLimit: _this.timeLimit
+                timeLimit: _this.getTimeLimitLocalWithTimeZone()
             };
             $.ajax({
                 type: 'POST',
@@ -516,7 +516,7 @@ var TodoCreateForm = (function (_super) {
         var todo = this.formConvertToTodo();
         todo.add().then(function (todo) {
             _this.close();
-            Page.todoViewList.add(new Todo(todo));
+            Page.todoViewList.add(todo);
         }).catch(function (error) {
             _this.displayErrorMessage(error);
         });
