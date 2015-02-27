@@ -1,0 +1,190 @@
+body {
+    background-color: rgba(249, 249, 249, 0.04)
+}
+
+h1.ui.header.page-title {
+    margin: 15px;
+}
+
+div.ui.button.menu-button {
+    position: absolute;
+    top: 73px;
+    min-width: 50px;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+div.ui.content-wrapper {
+    margin: 21px;
+    min-height: 200px;
+}
+
+.empty-trash-wrap {
+    text-align: right;
+    margin-right: 16px;
+}
+
+form.ui.todo-form {
+    width: 50%;
+    margin: auto;
+}
+
+form.ui.todo-form .memo {
+    height: 70px;
+    min-height: 70px;
+}
+
+form.ui.todo-form .todo-date {
+    width: 130px;
+}
+
+form.ui.todo-form .todo-time {
+    width: 85px;
+}
+
+form.ui.todo-form .todo-button {
+    float: right;
+    width: 136px;
+}
+
+form.ui.todo-form div.field.todo-button-wrap {
+    float: right;
+}
+
+form.ui.todo-form-fake {
+    visibility: hidden;
+    width: 50%;
+    margin: auto;
+}
+
+form.ui.todo-form-fake.visible {
+    visibility: visible;
+}
+
+form.ui.form.todo-update-form {
+    position: absolute;
+    z-index: 1000;
+    box-shadow: 0px 3px 16px 0px rgba(107, 107, 107, 1);
+    width: 50%;
+}
+
+i.slightly-large.icon {
+    font-size: 1.3em;
+    vertical-align: middle;
+}
+
+.todo-buttons {
+    text-align: right;
+    background-color: rgba(186, 186, 186, 0.28);
+    border-top: 1px solid rgba(184, 184, 184, 0.28);
+    padding: 8px 10px;
+    visibility: hidden;
+    cursor: auto;
+}
+
+.todo-buttons.active {
+    visibility: visible;
+}
+
+.todo-grid {
+    margin-top: 12px;
+}
+
+.todo-grid-container {
+    margin: 0 auto;
+}
+
+.todo-grid-container.few-todo {
+    margin: 0 0 0 100px;
+}
+
+.todo {
+    word-break: break-all;
+}
+
+.todo.editable {
+    cursor: pointer;
+}
+
+.ui.cards .card .content .header.title {
+    font-weight: bolder;
+    font-size: 11pt;
+    color: #180614;
+}
+
+.ui.cards .card .content {
+    padding-bottom: 4px;
+}
+
+.card .timeLimit {
+    text-align: right;
+}
+
+.card .memo {
+    margin: 5px 0px 15px 0px;
+    color: rgba(74, 74, 74, 0.9);
+}
+
+.todo-message-box {
+    position: fixed;
+    bottom: 0;
+    width: 40%;
+    padding-bottom: 10px;
+}
+
+.todo-message-box .todo-action-message {
+    transition: all 0.2s ease-out;
+    margin: 0 10px 10px 10px;
+    position: relative;
+    opacity: 0;
+}
+
+.todo-message-box .todo-action-message.active {
+    opacity: 1;
+}
+
+.todo-message-box .undo-wrap {
+    float: right;
+    margin-right: 20px;
+}
+
+.todo-message-box .undo-link {
+    margin-left: 10px;
+}
+
+.todo-message-template {
+    display: none;
+}
+
+.wrapper {
+    display: none;
+    position: absolute;
+    top: 0;
+    z-index: 500;
+    background-color: #989898;
+    width: 100%;
+    transition: opacity 0.23s ease-in-out;
+    opacity: 0;
+}
+
+.wrapper.blur {
+    opacity: 0.45;
+}
+
+.ui-effects-transfer {
+    border: 1px dotted black;
+}
+
+.empty-todo {
+    text-align: center;
+    font-size: x-large;
+    display: none;
+}
+
+div.ui.loading {
+    margin: 40px 0px;
+    height: 60px;
+}
+
+.template {
+    display: none;
+}

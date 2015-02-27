@@ -1,0 +1,656 @@
+(function () {
+    "use strict";
+    $(function () {
+        Handlebars.registerHelper('breaklines', function (text) {
+            text = Handlebars.Utils.escapeExpression(text);
+            text = text.replace(/(\r\n|\n|\r)/gm, '<br>');
+            return new Handlebars.SafeString(text);
+        });
+
+        var Wrapper = function () {
+            var $wrapper = $('.js-wrapper');
+            var adjustWrapperHeight = function () {
+                var height = $(document).height();
+                if (height < window.innerHeight) {
+                    height = window.innerHeight;
+                }
+                $wrapper.css('height', height);
+            };
+            var clickHandler = null;
+            return {
+                open: function (options) {
+                    if (options['clickHandler']) {
+                        clickHandler = options['clickHandler'];
+                        $wrapper.bind('click', clickHandler);
+                    }
+                    $wrapper.show();
+                    $(window).bind('resize', adjustWrapperHeight);
+                    adjustWrapperHeight();
+                    $wrapper.addClass('blur');
+
+                },
+                close: function () {
+                    $wrapper.removeClass('blur');
+                    $(window).unbind('resize', adjustWrapperHeight);
+                    setTimeout(function () {
+                        $wrapper.hide();
+                    }, 300);
+                    if (clickHandler) {
+                        $wrapper.unbind('click', clickHandler);
+                    }
+                }
+            }
+        };
+
+
+        var TodoMessage = function () {
+            var template = $('.js-todo-message-template').html();
+            var $message = $(template);
+            $('.js-todo-message-box').append($message);
+            return {
+                show: function (options) {
+                    var this_ = this;
+                    $message.find('.js-message-content').text(options['message']);
+                    $message.show();
+                    $message.addClass('active');
+                    $message.find('.js-message-close').click(function () {
+                        this_.hide();
+                    });
+                    if (options['undoCallback']) {
+                        $message.find('.js-undo-link').click(function () {
+                            $(this).unbind('click');
+                            options['undoCallback']();
+                            this_.hide();
+                        });
+                    } else {
+                        $message.find('.js-undo-wrap').hide();
+                    }
+                    setTimeout(function () {
+                        this_.hide();
+                    }, 5000);
+                },
+                hide: function () {
+                    var this_ = this;
+                    $message.removeClass('active');
+                    setTimeout(function () {
+                        $message.remove();
+                    }, 200);
+                }
+            };
+        };
+
+        var TodoState = {
+            AVAILABLE: 0,
+            ARCHIVED: 1,
+            DELETED: 2
+        };
+        Object.freeze(TodoState);
+
+        var Todo = function (attributes) {
+            attributes = attributes || {};
+            var todo = {
+                id: attributes['id'],
+                title: attributes['title'],
+                url: attributes['url'],
+                memo: attributes['memo'],
+                timeLimit: attributes['timeLimit'],
+                timeLimitDate: attributes['timeLimit'] ? moment(attributes['timeLimit'], "YYYY/MM/DD HH:mm").format('YYYY/MM/DD') : null,
+                timeLimitTime: attributes['timeLimit'] ? moment(attributes['timeLimit'], "YYYY/MM/DD HH:mm").format('HH:mm') : null,
+                state: attributes['state'],
+                previousState: undefined,
+                isAvailableState: attributes['state'] == TodoState.AVAILABLE,
+                isArchivedState: attributes['state'] == TodoState.ARCHIVED,
+                isDeletedState: attributes['state'] == TodoState.DELETED,
+                parse: function (json) {
+                    for (var i in json) {
+                        if (todo.hasOwnProperty(i)) {
+                            todo[i] = json[i];
+                        }
+                    }
+                },
+                get: function (id) {
+                    return new Promise(function (done, reject) {
+                        $.ajax({
+                            type: 'GET',
+                            url: '/get',
+                            data: {id: id}
+                        }).then(done, reject);
+                    });
+
+                },
+                add: function () {
+                    return new Promise(function (resolve, reject) {
+                        var postData = {
+                            title: todo.title,
+                            url: todo.url,
+                            memo: todo.memo,
+                            timeLimit: todo.timeLimit
+                        };
+                        $.ajax({
+                            type: 'POST',
+                            url: '/create',
+                            data: postData
+                        }).done(function (data) {
+                            resolve(JSON.parse(data).todo);
+                        }).fail(function (jqXHR, textStatus, errorThrown) {
+                            reject(JSON.parse(jqXHR.responseText).error);
+                        });
+                    });
+                },
+                update: function () {
+                    return new Promise(function (resolve, reject) {
+                        var postData = {
+                            id: todo.id,
+                            title: todo.title,
+                            url: todo.url,
+                            memo: todo.memo,
+                            timeLimit: todo.timeLimit
+                        };
+                        $.ajax({
+                            type: 'POST',
+                            url: '/update',
+                            data: postData
+                        }).done(function (data) {
+                            resolve(JSON.parse(data).todo);
+                        }).fail(function (jqXHR, textStatus, errorThrown) {
+                            reject(JSON.parse(jqXHR.responseText).error);
+                        });
+                    });
+                },
+                changeState: function (message) {
+                    return new Promise(function (resolve, reject) {
+                        var postData = {
+                            id: todo.id,
+                            state: todo.state
+                        };
+                        $.ajax({
+                            type: 'POST',
+                            url: '/update',
+                            data: postData
+                        }).done(function (data) {
+                            resolve(JSON.parse(data).todo);
+                        }).fail(function (data) {
+                            reject(JSON.parse(data).error);
+                        });
+                    });
+                },
+
+                remove: function () {
+                    todo.state = TodoState.DELETED;
+                    todo.previousState = TodoState.AVAILABLE;
+                    return todo.changeState();
+                },
+
+                archive: function () {
+                    todo.state = TodoState.ARCHIVED;
+                    todo.previousState = TodoState.AVAILABLE;
+                    return todo.changeState();
+                },
+
+                restore: function () {
+                    todo.state = TodoState.AVAILABLE;
+                    todo.previousState = TodoState.DELETED;
+                    return todo.changeState();
+                },
+
+                unarchive: function () {
+                    todo.state = TodoState.AVAILABLE;
+                    todo.previousState = TodoState.ARCHIVED;
+                    return todo.changeState();
+                },
+
+                undo: function () {
+                    var previousState = todo.state;
+                    todo.state = todo.previousState;
+                    todo.previousState = previousState;
+                    return todo.changeState();
+                }
+            };
+            return todo;
+        };
+
+
+        var TodoView = function (model) {
+            var this_ = this;
+            this_.model = model;
+            var source = $('.js-todo-template').html();
+            var template = Handlebars.compile(source);
+            this_.$el = $(template(this_.model));
+
+            this_.$el.find('i.icon').popup();
+
+            this_.$el.find('.js-todo-url')
+                .attr('href', this_.model.url)
+                .click(function (evt) {
+                    evt.stopPropagation();
+                });
+
+            var openUpdateForm = function () {
+                new TodoUpdateForm(this_.model.id).open();
+            };
+            var deleteTodo = function () {
+                this_.model.remove().then(function () {
+                    todoViewList.remove(this_.model.id);
+                    new TodoMessage().show({
+                        message: 'Todo moved to Trash', undoCallback: function () {
+                            this_.model.undo();
+                            todoViewList.redisplay(this_);
+                        }
+                    });
+                }).catch(function (data) {
+                    new TodoMessage().show({message: 'Failed!'});
+                });
+            };
+            var archiveTodo = function () {
+                this_.model.archive().then(function () {
+                    todoViewList.remove(this_.model.id);
+                    new TodoMessage().show({
+                        message: 'Todo archived', undoCallback: function () {
+                            this_.model.undo();
+                            todoViewList.redisplay(this_);
+                        }
+                    });
+                }).catch(function () {
+                    new TodoMessage().show({message: 'Failed!'});
+                });
+            };
+            var restoreTodo = function (id) {
+                this_.model.restore().then(function () {
+                    todoViewList.remove(this_.model.id);
+                    new TodoMessage().show({
+                        message: 'Todo restored', undoCallback: function () {
+                            this_.model.undo();
+                            todoViewList.redisplay(this_);
+                        }
+                    });
+                }).catch(function () {
+                    new TodoMessage().show({message: 'Failed!'});
+                });
+            };
+            var unarchiveTodo = function (id) {
+                this_.model.unarchive().then(function () {
+                    todoViewList.remove(this_.model.id);
+                    new TodoMessage().show({
+                        message: 'Todo unarchived', undoCallback: function () {
+                            this_.model.undo();
+                            todoViewList.redisplay(this_);
+                        }
+                    });
+                }).catch(function () {
+                    new TodoMessage().show({message: 'Failed!'});
+                });
+            };
+            this_.$el.mouseover(function () {
+                this_.$el.find('.js-todo-buttons').addClass('active');
+            }).mouseout(function () {
+                this_.$el.find('.js-todo-buttons').removeClass('active');
+            });
+            if (this_.$el.is('.editable')) {
+                this_.$el.click(function (evt) {
+                    evt.stopPropagation();
+                    openUpdateForm();
+                });
+            }
+
+            this_.$el.find('.js-todo-buttons').click(function (evt) {
+                evt.stopPropagation();
+            });
+
+            this_.$el.find('.js-delete-todo-button').click(function () {
+                deleteTodo();
+            });
+            this_.$el.find('.js-archive-todo-button').click(function () {
+                archiveTodo();
+            });
+            this_.$el.find('.js-restore-todo-button').click(function () {
+                restoreTodo();
+            });
+            this_.$el.find('.js-unarchive-todo-button').click(function () {
+                unarchiveTodo();
+            });
+
+        };
+
+        var TodoViewList = function () {
+            var this_ = this;
+            var list = {};
+            var $el = $('.js-todo-grid-container');
+            var masonry = undefined;
+
+            var fetch = function () {
+                return new Promise(function (done, reject) {
+                    $.ajax({
+                        type: 'GET',
+                        url: '/api' + location.pathname
+                    }).then(done, reject);
+                });
+            };
+            var parse = function (data) {
+                return JSON.parse(data).todoList;
+            };
+            fetch().then(function (data) {
+                var todoList = parse(data);
+                for (var i = 0; i < todoList.length; i++) {
+                    var todoView = new TodoView(new Todo(todoList[i]));
+                    list[todoList[i].id] = todoView;
+                    $el.append(todoView.$el);
+                }
+
+                Loading.close();
+                masonry = new Masonry($el.get(0), {
+                    columnWidth: 300,
+                    itemSelector: '.js-todo',
+                    "isFitWidth": true
+                });
+                masonry.layout();
+                onChangeLayout();
+
+            }).catch(function (data) {
+                alert('Error! Please Reload...');
+            });
+
+
+            var onChangeLayout = function () {
+                var todoCount = $('.js-todo:visible').length;
+                if (todoCount == 0) {
+                    EmptyTodoMessage.open();
+                } else {
+                    EmptyTodoMessage.close();
+                }
+                if (todoCount <= 3) {
+                    $el.addClass('few-todo');
+                } else {
+                    $el.removeClass('few-todo');
+                }
+            };
+
+            this_.get = function (id) {
+                return list[id];
+            };
+            this_.set = function (todoView) {
+                list[todoView.model.id] = todoView;
+            };
+            this_.add = function (todo) {
+                var todoView = new TodoView(todo);
+                this_.set(todoView);
+                $el.prepend(todoView.$el);
+                masonry.prepended(todoView.$el);
+                onChangeLayout();
+            };
+            this_.update = function (todo) {
+                var todoView = new TodoView(todo);
+                this_.get(todo.id).$el.html(todoView.$el.html());
+                todoView.$el = this_.get(todo.id).$el;
+                masonry.layout();
+                this_.set(todoView);
+                onChangeLayout();
+            };
+            this_.remove = function (id) {
+                this_.get(id).$el.hide();
+                masonry.layout();
+                delete list[id];
+                onChangeLayout();
+            };
+            this_.redisplay = function (todoView) {
+                this_.set(todoView);
+                todoView.$el.show();
+                masonry.layout();
+                onChangeLayout();
+            };
+        };
+        var todoViewList = new TodoViewList();
+
+        var TodoForm = function (options) {
+            var this_ = this;
+
+            var init = function (options) {
+                // Initialize
+                var source = $('.js-todo-form-template').html();
+                var template = Handlebars.compile(source);
+                var todo = options['todo'] || {};
+                this_.$el = $(template(todo))
+                    .removeClass('js-todo-form-template')
+                    .addClass(options['formClassName']);
+                this_.$el.find('.js-todo-button').text(options['buttonName']);
+                if (todo.timeLimit) {
+                    this_.$el.find('.ui.checkbox').checkbox('check');
+                }
+
+                var changeTimeLimitFields = function () {
+                    var datepickerField = this_.$el.find('.datepicker-field');
+                    var timepickerField = this_.$el.find('.timepicker-field');
+                    if (this_.$el.find('input[name="timeLimitToggle"]').is(':checked')) {
+                        datepickerField.css('visibility', 'visible');
+                        timepickerField.css('visibility', 'visible');
+                    } else {
+                        datepickerField.css('visibility', 'hidden');
+                        timepickerField.css('visibility', 'hidden');
+                    }
+                };
+                changeTimeLimitFields();
+
+                // Initialize DatePicker
+                new Pikaday({
+                    field: this_.$el.find('.js-datepicker')[0],
+                    format: 'YYYY/MM/DD'
+                });
+
+                // Initialize TimePicker
+                this_.$el.find('.js-timepicker').timepicker({'timeFormat': 'H:i'});
+
+                // Initialize toggle checkbox
+                this_.$el.find('.ui.checkbox').checkbox();
+
+                this_.$el.find('input[name="timeLimitToggle"]').change(function () {
+                    changeTimeLimitFields();
+                });
+
+                this_.$el.click(function (evt) {
+                    evt.stopPropagation();
+                });
+                this_.$el.find('.pika-single').click(function (evt) {
+                    evt.stopPropagation();
+                });
+
+                this_.$el.submit(function () {
+                    return false;
+                });
+
+            };
+            init(options);
+
+
+            this_.formConvertToTodo = function () {
+                var attributes = {};
+                attributes['id'] = this_.$el.find('.js-todo-id').val();
+                attributes['title'] = this_.getTitle();
+                attributes['url'] = this_.$el.find('input.js-todo-url').val();
+                attributes['memo'] = this_.$el.find('textarea.js-todo-memo').val();
+                var isSetTimeLimit = this_.$el.find('input.js-todo-time-limit-checkbox').is(':checked');
+                if (isSetTimeLimit) {
+                    var m = moment();
+                    var date = this_.$el.find('input.js-todo-date').val() || m.format('YYYY/MM/DD');
+                    var time = this_.$el.find('input.js-todo-time').val() || '00:00';
+                    attributes['timeLimit'] = date + ' ' + time + ' ' + m.format('Z');
+                }
+                return new Todo(attributes);
+            };
+            this_.getTitle = function () {
+                return this_.$el.find('input.js-todo-title').val();
+            };
+            this_.setTitle = function (title) {
+                this_.$el.find('input.js-todo-title').val(title);
+            };
+            this_.displayErrorMessage = function (errors) {
+                if (!errors) {
+                    return;
+                }
+                var validateMessage = new ValidateMessage();
+                errors.forEach(function (error) {
+                    validateMessage.addMessage(error);
+                });
+                validateMessage.show();
+            }
+        };
+
+        var ValidateMessage = function () {
+            var $el = $('form:visible .js-validate-error');
+            return {
+                addMessage: function (error) {
+                    var $message = $('<li>').text(error.Message);
+                    $el.find('ul').append($message);
+                },
+                show: function () {
+                    $el.show();
+                },
+                close: function () {
+                    $el.find('li').remove();
+                    $el.hide();
+                }
+            }
+        };
+
+        var TodoCreateForm = function () {
+            TodoForm.apply(this, [{formClassName: 'js-todo-create-form', buttonName: 'Add'}]);
+            var this_ = this;
+            var ret = {
+                closeHandler: undefined,
+                open: function () {
+                    this.closeHandler = function (evt) {
+                        if ($(evt.target).closest('.pika-single').length > 0
+                            || $(evt.target).closest('.ui-timepicker-wrapper').length > 0
+                        ) {
+                            return;
+                        }
+                        ret.close();
+                    };
+                    $(document).click(this.closeHandler);
+
+                    $('.js-todo-form-fake').after(this_.$el);
+                    this_.$el.find('input.js-todo-title').focus();
+                },
+                close: function () {
+                    $('.js-todo-form-fake').show();
+                    this_.$el.remove();
+                    $(document).unbind('click', this.closeHandler);
+                }
+            };
+
+            var addTodo = function () {
+                new ValidateMessage().close();
+                var todo = this_.formConvertToTodo();
+                todo.add().then(function (todo) {
+                    ret.close();
+                    todoViewList.add(new Todo(todo));
+                }).catch(function (error) {
+                    this_.displayErrorMessage(error);
+                });
+            };
+
+            this_.$el.find('.js-todo-button').click(function () {
+                addTodo();
+            });
+            return ret;
+        };
+        TodoCreateForm.prototype = Object.create(TodoForm.prototype);
+        TodoCreateForm.prototype.constructor = TodoForm;
+
+        var TodoUpdateForm = function (todoId) {
+            var todoView = todoViewList.get(todoId);
+            TodoForm.apply(this, [{
+                todo: todoView.model,
+                formClassName: 'js-todo-update-form',
+                buttonName: 'Update'
+            }]);
+            var this_ = this;
+            var wrapper = new Wrapper();
+            var closeHandler = function (evt) {
+                if ($(evt.target).closest('.pika-single').length > 0
+                    || $(evt.target).closest('.ui-timepicker-wrapper').length > 0
+                ) {
+                    return;
+                }
+                ret.close();
+            };
+            var ret = {
+                open: function () {
+                    $('body').append(this_.$el);
+
+                    wrapper.open({'clickHandler': closeHandler});
+
+                    this_.$el
+                        .css('opacity', '0')
+                        .addClass('todo-update-form')
+                        .css({
+                            'top': (($(window).height() / 2 - this_.$el.height() / 2) + $(window).scrollTop()),
+                            'left': ($(window).width() / 2) - (this_.$el.width() / 2)
+                        })
+                        .find('input.js-todo-title').focus();
+                    todoView.$el.effect("transfer", {to: this_.$el}, 200, function () {
+                        this_.$el.css('opacity', '')
+                    });
+                },
+                close: function () {
+                    wrapper.close();
+                    this_.$el.effect("transfer", {to: todoView.$el}, 200);
+                    this_.$el.remove();
+                }
+            };
+
+            var updateTodo = function () {
+                new ValidateMessage().close();
+                var todo = this_.formConvertToTodo();
+                todo.update().then(function (todo) {
+                    todoViewList.update(new Todo(todo));
+                    ret.close();
+                }).catch(function (error) {
+                    this_.displayErrorMessage(error);
+                });
+            };
+            this_.$el.find('.js-todo-button').click(function () {
+                updateTodo();
+            });
+
+            return ret;
+        };
+        TodoUpdateForm.prototype = Object.create(TodoForm.prototype);
+        TodoUpdateForm.prototype.constructor = TodoForm;
+
+        var EmptyTodoMessage = {
+            open: function () {
+                $('.js-todo-grid').append($('.js-empty-todo').show());
+            },
+            close: function () {
+                $('.js-empty-todo').hide();
+            }
+        };
+        var Loading = {
+            close: function () {
+                $('.js-loading').remove();
+            }
+        };
+
+        var Page = (function () {
+            $('.js-menu').click(function () {
+                $('.left.sidebar').sidebar('toggle');
+            });
+
+            $('.js-todo-form-fake input[name="title-fake"]').focus(function () {
+                $('.js-todo-form-fake').hide();
+                new TodoCreateForm().open();
+            });
+
+            $('.js-empty-trash').click(function () {
+                $('.js-empty-trash-modal')
+                    .modal({
+                        onApprove: function () {
+                            location.href = "/emptyTrash";
+                        }
+                    })
+                    .modal('show');
+            });
+        })();
+
+    });
+})();
+

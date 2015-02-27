@@ -1,0 +1,10 @@
+.idea
+tmp
+public/js/bower_components
+public/js/node_modules
+public/css/bower_components
+public/css/node_modules
+src/todo.db
+src/todo
+src/tmp
+.idea

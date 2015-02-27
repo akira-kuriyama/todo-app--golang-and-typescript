@@ -1,0 +1,192 @@
+[[define "body"]]
+<div class="ui left vertical inverted labeled icon sidebar menu">
+    <a href="/list"  class="item">
+        <i class="edit icon"></i>
+        List
+    </a>
+    <a href="/archivedList" class="item">
+        <i class="checkmark icon"></i>
+        Archive
+    </a>
+    <a href="/trashbox"  class="item">
+        <i class="trash icon"></i>
+        Trash Box
+    </a>
+</div>
+<div class="ui big launch right attached fixed button menu-button js-menu">
+    <i class="content icon"></i>
+</div>
+<div class="pusher">
+    <header>
+        <h1 class="ui header page-title">[[.Title]]</h1>
+    </header>
+
+    <form action="/" class='ui form segment todo-form-fake js-todo-form-fake [[if eq "List" $.SubTitle]]visible[[end]]'>
+        <div class="todo-input-fake">
+            <div class="field">
+                <input type="text" name="title-fake" placeholder="input Todo..."/>
+            </div>
+        </div>
+    </form>
+    [[if eq "Trash Box" $.SubTitle]]
+    <div class="empty-trash-wrap">
+        <div class="negative ui button js-empty-trash">Empty Trash</div>
+    </div>
+    [[end]]
+
+    <div class="ui divider"></div>
+
+    <div class="ui raised segment content-wrapper">
+        <a class="ui ribbon [[.Color]] label">[[.SubTitle]]</a>
+        <div class="todo-grid js-todo-grid">
+            <div class="ui active inverted dimmer loading js-loading">
+                <div class="ui loader"></div>
+            </div>
+            <div class="todo-grid-container js-todo-grid-container">
+            </div>
+        </div>
+    </div>
+
+    <div class="todo-message-box js-todo-message-box"></div>
+</div>
+
+<div class="template js-todo-template">
+    <div class='js-todo todo [[if eq "List" $.SubTitle]]editable[[end]]' data-id="{{id}}">
+        <div class="ui cards">
+            <div class="card">
+                <div class="content">
+                    <div class="header title js-title">
+                        {{title}}
+                    </div>
+                    <div class="description">
+                        <div class="meta timeLimit js-timeLimit">
+                            {{#if timeLimitFormatted}}
+                                {{timeLimitFormatted}}
+                            {{/if}}
+                        </div>
+                        <div class="memo js-memo">
+                            {{#if memo}}
+                                {{breaklines memo}}
+                            {{/if}}
+                        </div>
+                        <div class="js-url">
+                            {{#if url}}
+                            <a href="#" target="_blank" class="js-todo-url">{{url}}</a>
+                            {{/if}}
+                        </div>
+                    </div>
+                </div>
+                <div class="todo-buttons js-todo-buttons">
+                    {{#if isAvailableState}}
+                                    <span class="done js-archive-todo-button">
+                                        <i class="checkmark box link slightly-large icon" data-content="Archive"></i>
+                                    </span>
+                                    <span class="delete js-delete-todo-button">
+                                        <i class="trash link slightly-large icon" data-content="Delete"></i>
+                                    </span>
+                    {{/if}}
+                    {{#if isArchivedState}}
+                                    <span class="revert js-unarchive-todo-button">
+                                        <i class="undo link slightly-large icon" data-content="Unarchive"></i>
+                                    </span>
+                                    <span class="delete js-delete-todo-button">
+                                        <i class="trash link slightly-large icon" data-content="Delete"></i>
+                                    </span>
+                    {{/if}}
+                    {{#if isDeletedState}}
+                                    <span class="restore js-restore-todo-button">
+                                        <i class="undo link slightly-large icon" data-content="Restore"></i>
+                                    </span>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<div class="template js-todo-form-template">
+    <form action="/" class="ui form segment todo-form">
+        <div class="ui error message js-validate-error">
+            <ul class="list">
+            </ul>
+        </div>
+        <input type="hidden" class="js-todo-id" value="{{id}}"/>
+        <div class="field">
+            <label>Title</label>
+            <input type="text" name="title" class="js-todo-title" value="{{title}}" maxlength="100">
+        </div>
+        <div class="field">
+            <label>URL</label>
+            <input type="url" name="url" class="js-todo-url" value="{{url}}" maxlength="1000" />
+        </div>
+        <div class="field">
+            <label>Memo</label>
+            <textarea name="memo" rows="3" class="js-todo-memo memo" maxlength="500">{{memo}}</textarea>
+        </div>
+        <div class="fields">
+            <div class="field">
+                <label>TimeLimit</label>
+                <div class="ui toggle checkbox">
+                    <input type="checkbox" class="js-todo-time-limit-checkbox" name="timeLimitToggle">
+                    <label> </label>
+                </div>
+            </div>
+            <div class="field datepicker-field">
+                <label>Date</label>
+                <div class="ui input">
+                    <input type="text" class="js-datepicker js-todo-date todo-date" placeholder="yyyy/MM/dd" value="{{timeLimitDate}}">
+                </div>
+            </div>
+            <div class="field timepicker-field">
+                <label>Time</label>
+                <div class="ui input">
+                    <input type="text" class="js-timepicker js-todo-time todo-time" placeholder="HH:mm" value="{{timeLimitTime}}">
+                </div>
+            </div>
+            <div class="field todo-button-wrap">
+                <label>&nbsp;</label>
+                <div class="ui primary button js-todo-button todo-button"></div>
+            </div>
+        </div>
+    </form>
+</div>
+<div class="ui modal js-empty-trash-modal">
+    <i class="close icon"></i>
+    <div class="header">
+        Empty trash?
+    </div>
+    <div class="content">
+        <div class="description">
+            All todo in Trash will be permanently deleted.
+        </div>
+    </div>
+    <div class="actions">
+        <div class="ui button cancel">Cancel</div>
+        <div class="ui positive right labeled icon button">
+            OK
+            <i class="checkmark icon"></i>
+        </div>
+    </div>
+</div>
+<div class="wrapper js-wrapper"></div>
+<div class="js-todo-message-template todo-message-template">
+    <div class="ui positive message todo-action-message js-todo-message ">
+        <i class="close icon js-message-close"></i>
+        <div>
+            <span class="js-message-content"></span>
+            <span class="undo-wrap js-undo-wrap">|  <a href="javascript:;" class="undo-link js-undo-link">UNDO</a> </span>
+        </div>
+    </div>
+</div>
+<div class="empty-todo js-empty-todo">
+    [[if eq "List" $.SubTitle]]
+        Todo you add appear here
+    [[end]]
+    [[if eq "Archive" $.SubTitle]]
+        Your archived todo appear here
+    [[end]]
+    [[if eq "Trash Box" $.SubTitle]]
+        No Todo In Trash
+    [[end]]
+</div>
+[[end]]
