@@ -121,8 +121,8 @@ class Todo {
         this.isDeletedState = attributes.state == TodoState.DELETED;
     }
 
-    getTimeLimitLocalWithTimeZone(){
-        return moment.utc(this.timeLimit, 'YYYY/MM/DD HH:mm').local().format('YYYY/MM/DD HH:mm Z')
+    getTimeLimitLocalWithTimeZone() {
+        return this.timeLimit ? moment.utc(this.timeLimit, 'YYYY/MM/DD HH:mm').local().format('YYYY/MM/DD HH:mm Z') : '';
     }
 
     parse(json:{id:number; title:string ; url :string; memo :string; timeLimit: string; state :number}) {
