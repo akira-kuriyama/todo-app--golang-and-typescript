@@ -104,10 +104,10 @@ var Todo = (function () {
             this.timeLimitDate = m.format('YYYY/MM/DD');
             this.timeLimitTime = m.format('HH:mm');
         }
-        this.state = attributes.state;
-        this.isAvailableState = attributes.state == 0 /* AVAILABLE */;
-        this.isArchivedState = attributes.state == 1 /* ARCHIVED */;
-        this.isDeletedState = attributes.state == 2 /* DELETED */;
+        this.state = attributes.state || 0 /* AVAILABLE */;
+        this.isAvailableState = this.state == 0 /* AVAILABLE */;
+        this.isArchivedState = this.state == 1 /* ARCHIVED */;
+        this.isDeletedState = this.state == 2 /* DELETED */;
     }
     Todo.prototype.getTimeLimitLocalWithTimeZone = function () {
         return this.timeLimit ? moment.utc(this.timeLimit, 'YYYY/MM/DD HH:mm').local().format('YYYY/MM/DD HH:mm Z') : '';
@@ -142,7 +142,7 @@ var Todo = (function () {
                 url: '/create',
                 data: postData
             }).done(function (data) {
-                resolve(JSON.parse(data).todo);
+                resolve(new Todo(JSON.parse(data).todo));
             }).fail(function (jqXHR, textStatus, errorThrown) {
                 reject(JSON.parse(jqXHR.responseText).error);
             });
@@ -163,7 +163,7 @@ var Todo = (function () {
                 url: '/update',
                 data: postData
             }).done(function (data) {
-                resolve(JSON.parse(data).todo);
+                resolve(new Todo(JSON.parse(data).todo));
             }).fail(function (jqXHR, textStatus, errorThrown) {
                 reject(JSON.parse(jqXHR.responseText).error);
             });
@@ -181,7 +181,7 @@ var Todo = (function () {
                 url: '/update',
                 data: postData
             }).done(function (data) {
-                resolve(JSON.parse(data).todo);
+                resolve(new Todo(JSON.parse(data).todo));
             }).fail(function (data) {
                 reject(JSON.parse(data).error);
             });

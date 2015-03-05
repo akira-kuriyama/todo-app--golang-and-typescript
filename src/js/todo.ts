@@ -115,10 +115,10 @@ class Todo {
             this.timeLimitDate = m.format('YYYY/MM/DD');
             this.timeLimitTime = m.format('HH:mm');
         }
-        this.state = attributes.state;
-        this.isAvailableState = attributes.state == TodoState.AVAILABLE;
-        this.isArchivedState = attributes.state == TodoState.ARCHIVED;
-        this.isDeletedState = attributes.state == TodoState.DELETED;
+        this.state = attributes.state || TodoState.AVAILABLE;
+        this.isAvailableState = this.state == TodoState.AVAILABLE;
+        this.isArchivedState = this.state == TodoState.ARCHIVED;
+        this.isDeletedState = this.state == TodoState.DELETED;
     }
 
     getTimeLimitLocalWithTimeZone() {
@@ -157,7 +157,7 @@ class Todo {
                 url: '/create',
                 data: postData
             }).done((data)=> {
-                resolve(JSON.parse(data).todo);
+                resolve(new Todo(JSON.parse(data).todo));
             }).fail((jqXHR, textStatus, errorThrown)=> {
                 reject(JSON.parse(jqXHR.responseText).error);
             });
@@ -178,7 +178,7 @@ class Todo {
                 url: '/update',
                 data: postData
             }).done((data)=> {
-                resolve(JSON.parse(data).todo);
+                resolve(new Todo(JSON.parse(data).todo));
             }).fail((jqXHR, textStatus, errorThrown) => {
                 reject(JSON.parse(jqXHR.responseText).error);
             });
@@ -196,7 +196,7 @@ class Todo {
                 url: '/update',
                 data: postData
             }).done((data)=> {
-                resolve(JSON.parse(data).todo);
+                resolve(new Todo(JSON.parse(data).todo));
             }).fail((data)=> {
                 reject(JSON.parse(data).error);
             });
