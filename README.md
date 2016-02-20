@@ -2,9 +2,6 @@
 Todo App (written in Golang and TypeScript)
 
 
-## Demo
-
-http://demo.todo.st-marron.info/
 
 ## Install
 
